@@ -13,17 +13,27 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
-        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.13t"]
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@9e62be81b28222addecf85e47571213eb7680449
         with:
           cache: pip
           cache-dependency-path: "pyproject.toml"
           python-version: ${{ matrix.python-version }}
+      - name: Install hatch dependencies (free-threaded)
+        if: matrix.python-version == '3.13t'
+        run: |
+          # python-zstandard doesn't yet support free-threaded
+          pip install git+https://github.com/indygreg/python-zstandard.git@refs/pull/243/head
+          # install cryptography build dependencies
+          pip install git+https://github.com/colesbury/cffi.git@ft
+          pip install maturin setuptools
+          # cryptography doesn't yet support free-threaded
+          pip install git+https://github.com/pyca/cryptography.git@refs/pull/12555/head --no-build-isolation
       - name: Install hatch
         run: |
           pip install -U hatch
@@ -110,6 +120,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.10", "3.13t"]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -117,9 +128,9 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@9e62be81b28222addecf85e47571213eb7680449
         with:
-          python-version: "3.10"
+          python-version: ${{ matrix.python-version }}
       - name: test
         uses: actions-rs/cargo@v1
         with:
